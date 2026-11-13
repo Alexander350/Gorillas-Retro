@@ -1132,10 +1132,14 @@ function actualizarYDibujarIntro() {
   requestAnimationFrame(actualizarYDibujarIntro);
 }
 
-// Iniciar bucle de intro al cargar
-window.addEventListener('load', () => {
-  setTimeout(actualizarYDibujarIntro, 500);
-});
+// Iniciar bucle de intro de forma directa y segura
+if (typeof canvas !== 'undefined' && typeof ctx !== 'undefined') {
+  setTimeout(actualizarYDibujarIntro, 300);
+} else {
+  window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(actualizarYDibujarIntro, 300);
+  });
+}
     </script>
     <!-- actualizacion movil -->
 </body>
