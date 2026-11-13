@@ -17,17 +17,17 @@
             user-select: none;
         }
         #game-container {
-    width: 100%;
-    max-width: 900px;
-    aspect-ratio: 900 / 500;
-    height: auto;
-    background-color: #0000aa;
-    border: 4px solid #ffffff;
-    position: relative;
-    box-shadow: 0 0 20px rgba(0,0,0,0.8);
-    overflow: hidden;
-    margin: 0 auto;
-}
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 900 / 500;
+            height: auto;
+            background-color: #0000aa;
+            border: 4px solid #ffffff;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            overflow: hidden;
+            margin: 0 auto;
+        }
         .hud {
             position: absolute;
             top: 10px;
@@ -279,7 +279,6 @@
         bufferCanvas.height = 500;
         const bCtx = bufferCanvas.getContext('2d');
 
-        // ESTADOS: 'MENU', 'BLOQUEADO', 'TURNO_JUGADOR', 'TURNO_IA'
         let estadoJuego = 'MENU';
         let tipoJuego = 'PVP'; 
         let currentInput = 'angulo'; 
@@ -291,7 +290,7 @@
         let scoreJ2 = 0;
         let numeroPartida = 1;
         let ultimoGanador = 1;
-        let tirosIAEnRonda = 0; // Controla la curva de aprendizaje por ronda
+        let tirosIAEnRonda = 0;
 
         let inventarioJ1 = ['ESTANDAR'];
         let inventarioJ2 = ['ESTANDAR'];
@@ -446,7 +445,27 @@
             context.restore();
         }
 
-        function iniciarModoJuego(modo) {
+        // Función con la experiencia inmersiva para móviles/tablets (Pantalla completa y rotación horizontal)
+        async function iniciarModoJuego(modo) {
+            try {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) {
+                    await elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    await elem.webkitRequestFullscreen();
+                }
+            } catch (err) {
+                console.log("Fullscreen no disponible o omitido", err);
+            }
+
+            try {
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape');
+                }
+            } catch (err) {
+                console.log("Orientación horizontal bloqueada o no soportada", err);
+            }
+
             tipoJuego = modo;
             scoreJ1 = 0;
             scoreJ2 = 0;
@@ -680,7 +699,6 @@
             updateDisplay();
         }
 
-        // Soporte limpio de teclado físico sin repeticiones fantasma
         window.addEventListener('keydown', (e) => {
             if (e.repeat) return;
             if (estadoJuego !== 'TURNO_JUGADOR') return;
@@ -759,8 +777,6 @@
                 mejorAngulo += (Math.floor(Math.random() * 26) - 13);
                 mejorVelocidad += (Math.floor(Math.random() * 20) - 10);
             } else if (tipoJuego === 'DIFICIL') {
-                // Primer tiro falla deliberadamente fuera del radio de impacto (22px) para que no sea 100/100 letal.
-                // En tiros siguientes afina su puntería progresivamente.
                 let factorDispersion = tirosIAEnRonda === 1 ? 1.0 : (tirosIAEnRonda === 2 ? 0.5 : 0.25);
                 let signo = Math.random() < 0.5 ? -1 : 1;
                 let desvioAngulo = Math.round((4 + Math.random() * 4) * factorDispersion) * signo;
@@ -834,13 +850,13 @@
             estadoJuego = 'BLOQUEADO';
             if(turnoJugador === 1) g1EstadoBrazos = 3;
             else g2EstadoBrazos = 3;
-            
+
             let startX = turnoJugador === 1 ? g1X : g2X;
             let startY = turnoJugador === 1 ? (g1Y - 20) : (g2Y - 20);
-            
+
             let ang = parseFloat(anguloVal) || 45;
             let vel = parseFloat(velocidadVal) || 25;
-            
+
             if(turnoJugador === 2) ang = 180 - ang;
 
             let armaActual = turnoJugador === 1 ? armaSeleccionadaJ1 : armaSeleccionadaJ2;
@@ -853,12 +869,12 @@
             let proyectiles = [];
             if(armaActual === 'CAPSULA') {
                 proyectiles.push({
-                    x: startX, y: startY, vx: baseVx, vy: baseVy, 
+                    x: startX, y: startY, vx: baseVx, vy: baseVy,
                     tipo: 'capsula', recorrido: 0, detonarDist: extraParam * 1.5, activa: true
                 });
             } else {
                 proyectiles.push({
-                    x: startX, y: startY, vx: baseVx, vy: baseVy, 
+                    x: startX, y: startY, vx: baseVx, vy: baseVy,
                     tipo: armaActual, factorTaladro: extraParam, activa: true
                 });
             }
@@ -884,7 +900,7 @@
                     if(p.tipo === 'capsula') {
                         p.recorrido = Math.hypot(p.x - startX, p.y - startY);
                         if(p.recorrido >= p.detonarDist) {
-                            p.activa = false; 
+                            p.activa = false;
                             proyectiles.push({ x: p.x, y: p.y, vx: p.vx * 1.15, vy: p.vy + 1.2, tipo: 'estandar_hijo', activa: true });
                             proyectiles.push({ x: p.x, y: p.y, vx: p.vx * 0.85, vy: p.vy - 1.2, tipo: 'estandar_hijo', activa: true });
                         }
@@ -892,7 +908,7 @@
 
                     drawRetroBanana(ctx, p.x, p.y, rotacion, p.tipo);
 
-                    // Colisión gaviotas
+                    // Colisión con gaviotas
                     for(let g of gaviotasActivas) {
                         if(g.viva && Math.abs(p.x - g.x) < 25 && Math.abs(p.y - g.y) < 25) {
                             g.viva = false;
@@ -900,22 +916,22 @@
                             let recompensa = Math.random() > 0.5 ? 'TALADRO' : 'CAPSULA';
                             if(turnoJugador === 1) inventarioJ1.push(recompensa);
                             else inventarioJ2.push(recompensa);
-                            mostrarMensaje(`🕊️ ¡GAVIOTA CAZADA! ARMA OBTENIDA: ${recompensa}`);
+                            mostrarMensaje(`🎯 ¡GAVIOTA CAZADA! ARMA OBTENIDA: ${recompensa}`);
                             reaparecerGaviota(g);
                             break;
                         }
                     }
 
-                    // Colisión gorilas
+                    // Colisión con gorilas
                     let targetX = turnoJugador === 1 ? g2X : g1X;
                     let targetY = turnoJugador === 1 ? g2Y : g1Y;
-                    if(Math.hypot(p.x - targetX, p.y - targetY) < 22) {
+                    if (Math.hypot(p.x - targetX, p.y - targetY) < 22) {
                         p.activa = false;
                         rondaFinalizada = true;
                         playExplosionSound('TALADRO');
                         ultimoGanador = turnoJugador;
                         let ganadorTexto = turnoJugador === 1 ? 'JUGADOR 1' : (tipoJuego === 'PVP' ? 'JUGADOR 2' : 'COMPUTADORA');
-                        
+
                         desintegrarGorilaRival(turnoJugador, targetX, targetY, () => {
                             if(turnoJugador === 1) scoreJ1++; else scoreJ2++;
                             mostrarMensaje(`💥 ¡IMPACTO DIRECTO DE ${ganadorTexto}!`, 1800);
@@ -926,15 +942,15 @@
                         return;
                     }
 
-                    // Colisión edificios
+                    // Colisión con edificios
                     for(let b of buildings) {
                         let bTop = canvas.height - b.h;
                         if(p.x >= b.x && p.x <= b.x + b.w && p.y >= bTop && p.y <= canvas.height) {
                             p.activa = false;
                             playExplosionSound(p.tipo);
-                            
+
                             let radioExplosion = (p.tipo === 'TALADRO') ? (15 + (Math.max(0, Math.min(1, p.factorTaladro)) * 40)) : 20;
-                            
+
                             bCtx.globalCompositeOperation = 'destination-out';
                             bCtx.beginPath(); bCtx.arc(p.x, p.y, radioExplosion, 0, Math.PI * 2); bCtx.fill();
                             if(p.tipo === 'TALADRO') {
