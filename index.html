@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gorilas.bas - Versión Definitiva</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #0000aa;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 900 / 500;
+            height: auto;
+            background-color: #0000aa;
+            border: 4px solid #ffffff;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            overflow: hidden;
+            margin: 0 auto;
+        }
+        .hud {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            color: #ffff55;
+            font-weight: bold;
+            font-size: 15px;
+            z-index: 10;
+        }
+        #banner-msg {
+            position: absolute;
+            top: 85px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #000000;
+            color: #ffff55;
+            border: 2px solid #00ffff;
+            padding: 10px 20px;
+            font-weight: bold;
+            font-size: 15px;
+            z-index: 40;
+            display: none;
+            text-align: center;
+            box-shadow: 4px 4px 0px #000;
+        }
+        #gameCanvas {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            z-index: 2;
+        }
+        #mode-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 170, 0.96);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            gap: 15px;
+        }
+        #mode-menu h1 {
+            color: #ffff55;
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px #000;
+        }
+        .menu-btn {
+            background: #222;
+            color: #00ffff;
+            border: 2px solid #00ffff;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            cursor: pointer;
+            border-radius: 6px;
+            width: 280px;
+            text-align: center;
+        }
+        .menu-btn:hover { background: #00ffff; color: #000; }
+        #action-btn {
+            position: absolute;
+            top: 45px;
+            right: 20px;
+            background: #00ffff;
+            color: #000;
+            border: 2px solid #fff;
+            padding: 6px 12px;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            cursor: pointer;
+            border-radius: 4px;
+            z-index: 30;
+        }
+        #action-btn:hover { background: #ffff55; }
+        .control-panel {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.92);
+            border: 2px solid #00ffff;
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            gap: 15px;
+            z-index: 25;
+            transition: opacity 0.2s ease;
+        }
+        .control-panel.hidden { opacity: 0; pointer-events: none; }
+        .inputs-view {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: #00ffff;
+            font-size: 13px;
+            gap: 6px;
+        }
+        .inputs-view div span {
+            background: #222;
+            padding: 3px 6px;
+            border: 1px solid #00ffff;
+            display: inline-block;
+            min-width: 65px;
+            text-align: center;
+            color: #fff;
+        }
+        .inputs-view div.active span { border-color: #ffff55; color: #ffff55; }
+        #selector-arma {
+            background: #222;
+            color: #ffff55;
+            border: 1px solid #00ffff;
+            padding: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 105px;
+            text-align: center;
+        }
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 35px);
+            gap: 4px;
+        }
+        .numpad button {
+            background-color: #222;
+            color: #00ffff;
+            border: 1px solid #00ffff;
+            padding: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .numpad button:hover { background-color: #00ffff; color: #000; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="mode-menu">
+            <h1>GORILAS.BAS</h1>
+            <button class="menu-btn" onclick="iniciarModoJuego('PVP')">JUGADOR vs JUGADOR</button>
+            <button class="menu-btn" onclick="iniciarModoJuego('FACIL')">VS COMPUTADORA (FÁCIL)</button>
+            <button class="menu-btn" onclick="iniciarModoJuego('DIFICIL')">VS COMPUTADORA (DIFÍCIL)</button>
+        </div>
+
+        <div class="hud">
+            <span id="turn-indicator">TURNO: JUGADOR 1 (0-360°)</span>
+            <span id="score-indicator">PARTIDA #1 | J1: 0 - J2: 0</span>
+        </div>
+
+        <div id="banner-msg"></div>
+
+        <button id="action-btn" onclick="toggleTeclado()">ACTION: OCULTAR/VER</button>
+
+        <canvas id="gameCanvas" width="900" height="500"></canvas>
+
+        <div class="control-panel hidden" id="controlPanel">
+            <div class="inputs-view">
+                <div id="row-ang" class="active">ÁNGULO: <span id="val-angulo"></span></div>
+                <div id="row-vel">VELOCIDAD: <span id="val-vel"></span></div>
+                <div id="row-extra" style="display: none;">PARÁMETRO: <span id="val-extra">--</span></div>
+                <div>
+                    ARMA: 
+                    <select id="selector-arma" onchange="cambiarArmaJugador(this.value)">
+                        <option value="ESTANDAR">ESTANDAR</option>
+                    </select>
+                </div>
+            </div>
+            <div class="numpad">
+                <button onclick="pressNum('1')">1</button><button onclick="pressNum('2')">2</button><button onclick="pressNum('3')">3</button>
+                <button onclick="pressNum('4')">4</button><button onclick="pressNum('5')">5</button><button onclick="pressNum('6')">6</button>
+                <button onclick="pressNum('7')">7</button><button onclick="pressNum('8')">8</button><button onclick="pressNum('9')">9</button>
+                <button onclick="pressBack()">⌫</button><button onclick="pressNum('0')">0</button><button onclick="pressEnter()">⏎</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if(!audioCtx) audioCtx = new AudioCtx();
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playTone(freq, duration, type = 'square') {
+            if(!audioCtx) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        function playExplosionSound(tipo = 'ESTANDAR') {
+            if(!audioCtx) return;
+            try {
+                let dur = tipo === 'TALADRO' ? 0.6 : 0.4;
+                let bufferSize = audioCtx.sampleRate * dur;
+                let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                let data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                let noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                let filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(tipo === 'TALADRO' ? 200 : 400, audioCtx.currentTime);
+                let gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                noise.start();
+            } catch(e){}
+        }
+
+        function mostrarMensaje(texto, duracion = 2000) {
+            const banner = document.getElementById('banner-msg');
+            banner.innerText = texto;
+            banner.style.display = 'block';
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, duracion);
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const bufferCanvas = document.createElement('canvas');
+        bufferCanvas.width = 900;
+        bufferCanvas.height = 500;
+        const bCtx = bufferCanvas.getContext('2d');
+
+        let estadoJuego = 'MENU';
+        let tipoJuego = 'PVP'; 
+        let currentInput = 'angulo'; 
+        let anguloVal = '';
+        let velocidadVal = '';
+        let extraVal = ''; 
+        let turnoJugador = 1; 
+        let scoreJ1 = 0;
+        let scoreJ2 = 0;
+        let numeroPartida = 1;
+        let ultimoGanador = 1;
+        let tirosIAEnRonda = 0;
+
+        let inventarioJ1 = ['ESTANDAR'];
+        let inventarioJ2 = ['ESTANDAR'];
+        let armaSeleccionadaJ1 = 'ESTANDAR';
+        let armaSeleccionadaJ2 = 'ESTANDAR';
+
+        const buildingColors = ['#aa0000', '#00aaaa', '#aa5500', '#aa00aa', '#aaaa00', '#00aa00', '#555555'];
+        let buildings = [];
+        let g1X = 0, g2X = 0;
+        let g1Y = 0, g2Y = 0;
+        let g1EstadoBrazos = 0; 
+        let g2EstadoBrazos = 0;
+
+        let gaviotasActivas = [];
+        let gaviotasDerribadasRonda = 0;
+        let gaviotaTimer = null;
+        let iaTimeoutId = null;
+
+        class Building {
+            constructor(x, w, h, color) {
+                this.x = x; this.w = w; this.h = h; this.color = color;
+                this.windows = [];
+                let winW = 4, winH = 7, gapX = 10, gapY = 14;
+                for(let wx = this.x + 6; wx < this.x + this.w - 8; wx += gapX) {
+                    for(let wy = canvas.height - this.h + 10; wy < canvas.height - 15; wy += gapY) {
+                        this.windows.push({ x: wx, wy: wy, w: winW, h: winH, on: Math.random() > 0.35 });
+                    }
+                }
+            }
+            draw(context) {
+                context.fillStyle = this.color;
+                context.fillRect(this.x, canvas.height - this.h, this.w, this.h);
+                context.strokeStyle = '#000000';
+                context.lineWidth = 2;
+                context.strokeRect(this.x, canvas.height - this.h, this.w, this.h);
+                for(let win of this.windows) {
+                    context.fillStyle = win.on ? '#ffff55' : '#555555';
+                    context.fillRect(win.x, win.wy, win.w, win.h);
+                }
+            }
+        }
+
+        function drawRetroGorilla(context, x, y, modoBrazos = 0, derrotado = false) {
+            context.save();
+            context.translate(x, y);
+            context.fillStyle = '#ffaa00';
+            context.strokeStyle = '#000000';
+            context.lineWidth = 1;
+
+            context.fillRect(-8, -30, 16, 10);
+            context.fillStyle = '#552200';
+            context.fillRect(-5, -27, 10, 5);
+
+            if (derrotado) {
+                context.strokeStyle = '#ffff55';
+                context.lineWidth = 1.5;
+                context.beginPath();
+                context.moveTo(-4, -26); context.lineTo(-1, -23);
+                context.moveTo(-1, -26); context.lineTo(-4, -23);
+                context.moveTo(1, -26); context.lineTo(4, -23);
+                context.moveTo(4, -26); context.lineTo(1, -23);
+                context.stroke();
+            } else {
+                context.fillStyle = '#000000';
+                context.fillRect(-3, -26, 2, 2);
+                context.fillRect(2, -26, 2, 2);
+            }
+
+            context.fillStyle = '#ffaa00';
+            context.fillRect(-12, -20, 24, 14);
+            context.fillRect(-10, -6, 20, 6);
+
+            let izqArriba = (modoBrazos === 1 || modoBrazos === 3);
+            let derArriba = (modoBrazos === 2 || modoBrazos === 3);
+
+            if(izqArriba) {
+                context.fillRect(-17, -32, 6, 16);
+                context.fillRect(-19, -34, 10, 6);
+            } else {
+                context.fillRect(-18, -20, 6, 14);
+                context.fillRect(-18, -8, 6, 6);
+            }
+
+            if(derArriba) {
+                context.fillRect(11, -32, 6, 16);
+                context.fillRect(9, -34, 10, 6);
+            } else {
+                context.fillRect(12, -20, 6, 14);
+                context.fillRect(12, -8, 6, 6);
+            }
+
+            context.fillRect(-10, 0, 7, 8);
+            context.fillRect(3, 0, 7, 8);
+            context.restore();
+        }
+
+        function drawRetroSun(context) {
+            context.save();
+            context.translate(450, 35);
+            context.fillStyle = '#ffff55';
+            context.beginPath();
+            context.arc(0, 0, 16, 0, Math.PI * 2);
+            context.fill();
+            context.strokeStyle = '#ffff55';
+            context.lineWidth = 2;
+            for(let i = 0; i < 8; i++) {
+                let rad = (i * Math.PI / 4);
+                context.beginPath();
+                context.moveTo(Math.cos(rad) * 18, Math.sin(rad) * 18);
+                context.lineTo(Math.cos(rad) * 25, Math.sin(rad) * 25);
+                context.stroke();
+            }
+            context.fillStyle = '#000000';
+            context.fillRect(-6, -5, 3, 3);
+            context.fillRect(3, -5, 3, 3);
+            context.beginPath();
+            context.arc(0, 3, 8, 0.2, Math.PI - 0.2);
+            context.stroke();
+            context.restore();
+        }
+
+        function drawRetroSeagull(context, x, y, alasArriba = false) {
+            context.save();
+            context.translate(x, y);
+            context.strokeStyle = '#ffffff';
+            context.lineWidth = 2;
+            context.beginPath();
+            if(alasArriba) {
+                context.moveTo(-10, -5); context.lineTo(0, 2); context.lineTo(10, -5);
+            } else {
+                context.moveTo(-10, 3); context.lineTo(0, -2); context.lineTo(10, 3);
+            }
+            context.stroke();
+            context.restore();
+        }
+
+        function drawRetroBanana(context, x, y, rotacion, tipo = 'ESTANDAR') {
+            context.save();
+            context.translate(x, y);
+            context.rotate(rotacion * Math.PI / 180);
+            if(tipo === 'TALADRO') {
+                context.fillStyle = '#00ffff';
+                context.beginPath(); context.arc(0, 0, 6, 0, Math.PI * 2); context.fill();
+            } else if(tipo === 'CAPSULA' || tipo === 'capsula') {
+                context.fillStyle = '#ff55ff';
+                context.fillRect(-7, -4, 14, 8);
+            } else {
+                context.strokeStyle = '#ffff55';
+                context.lineWidth = 3;
+                context.beginPath(); context.arc(0, 0, 7, 0.4, Math.PI - 0.4); context.stroke();
+            }
+            context.restore();
+        }
+
+        // Función con la experiencia inmersiva para móviles/tablets (Pantalla completa y rotación horizontal)
+        async function iniciarModoJuego(modo) {
+            try {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) {
+                    await elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    await elem.webkitRequestFullscreen();
+                }
+            } catch (err) {
+                console.log("Fullscreen no disponible o omitido", err);
+            }
+
+            try {
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape');
+                }
+            } catch (err) {
+                console.log("Orientación horizontal bloqueada o no soportada", err);
+            }
+
+            tipoJuego = modo;
+            scoreJ1 = 0;
+            scoreJ2 = 0;
+            numeroPartida = 1;
+            ultimoGanador = 1;
+            document.getElementById('mode-menu').style.display = 'none';
+            initAudio();
+            generarNuevaPartida();
+        }
+
+        function limpiarEntradas() {
+            anguloVal = '';
+            velocidadVal = '';
+            extraVal = '';
+            currentInput = 'angulo';
+        }
+
+        function generarNuevaPartida() {
+            estadoJuego = 'BLOQUEADO';
+            if(iaTimeoutId) clearTimeout(iaTimeoutId);
+            document.getElementById('controlPanel').classList.add('hidden');
+
+            buildings = [];
+            let esPartidaTitan = (numeroPartida % 4 === 0);
+            let titanIndex = 4;
+            let numBuildings = 8;
+            let bWidth = canvas.width / numBuildings;
+            let rascacielosAltos = [Math.floor(Math.random() * 3), 5 + Math.floor(Math.random() * 3)];
+
+            for(let i = 0; i < numBuildings; i++) {
+                let h;
+                if(esPartidaTitan && i === titanIndex) h = 360; 
+                else if(rascacielosAltos.includes(i)) h = Math.floor(Math.random() * 60) + 280; 
+                else h = Math.floor(Math.random() * 90) + 110; 
+                let color = buildingColors[Math.floor(Math.random() * buildingColors.length)];
+                buildings.push(new Building(i * bWidth, bWidth, h, color));
+            }
+
+            bCtx.clearRect(0, 0, bufferCanvas.width, bufferCanvas.height);
+            for(let b of buildings) b.draw(bCtx);
+
+            let b1, b2;
+            if(Math.random() > 0.5) {
+                b1 = Math.floor(Math.random() * 2); 
+                b2 = 6 + Math.floor(Math.random() * 2); 
+            } else {
+                b1 = Math.floor(Math.random() * 4); 
+                b2 = b1 + 3 + Math.floor(Math.random() * (7 - (b1 + 3))); 
+                if(b2 > 7) b2 = 7;
+            }
+
+            let b1Obj = buildings[b1];
+            g1X = b1Obj.x + (b1Obj.w / 2);
+            g1Y = canvas.height - b1Obj.h - 8;
+
+            let b2Obj = buildings[b2];
+            g2X = b2Obj.x + (b2Obj.w / 2);
+            g2Y = canvas.height - b2Obj.h - 8;
+
+            turnoJugador = ultimoGanador;
+            tirosIAEnRonda = 0;
+            limpiarEntradas();
+            redibujarTodo();
+            
+            gaviotasDerribadasRonda = 0;
+            if(gaviotaTimer) clearInterval(gaviotaTimer);
+            iniciarGaviotas();
+            reproducirIntroConBaile();
+        }
+
+        function reproducirIntroConBaile() {
+            estadoJuego = 'BLOQUEADO';
+            document.getElementById('controlPanel').classList.add('hidden');
+            let notas = [
+                { f: 261, d: 0.15 }, { f: 329, d: 0.15 }, { f: 392, d: 0.15 },
+                { f: 523, d: 0.25 }, { f: 392, d: 0.15 }, { f: 523, d: 0.35 }
+            ];
+            let index = 0;
+            let pasoBaile = 1;
+            let intervalMusic = setInterval(() => {
+                if(index < notas.length) {
+                    playTone(notas[index].f, notas[index].d, 'square');
+                    g1EstadoBrazos = pasoBaile;
+                    g2EstadoBrazos = (pasoBaile === 1) ? 2 : 1;
+                    pasoBaile = (pasoBaile === 1) ? 2 : 1;
+                    redibujarTodo();
+                    index++;
+                } else {
+                    clearInterval(intervalMusic);
+                    g1EstadoBrazos = 0;
+                    g2EstadoBrazos = 0;
+                    redibujarTodo();
+                    activarTurnoActual();
+                }
+            }, 200);
+        }
+
+        function activarTurnoActual() {
+            limpiarEntradas();
+            if (tipoJuego !== 'PVP' && turnoJugador === 2) {
+                estadoJuego = 'TURNO_IA';
+                document.getElementById('controlPanel').classList.add('hidden');
+                updateDisplay();
+                ejecutarTurnoIA();
+            } else {
+                estadoJuego = 'TURNO_JUGADOR';
+                document.getElementById('controlPanel').classList.remove('hidden');
+                updateDisplay();
+            }
+        }
+
+        function redibujarTodo() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(bufferCanvas, 0, 0);
+            drawRetroSun(ctx);
+            drawRetroGorilla(ctx, g1X, g1Y, g1EstadoBrazos);
+            drawRetroGorilla(ctx, g2X, g2Y, g2EstadoBrazos);
+
+            gaviotasActivas.forEach(g => {
+                if(g.viva) drawRetroSeagull(ctx, g.x, g.y, g.alas);
+            });
+        }
+
+        function toggleTeclado() {
+            initAudio();
+            if (estadoJuego !== 'TURNO_JUGADOR') return;
+            document.getElementById('controlPanel').classList.toggle('hidden');
+        }
+
+        function actualizarSelectorArmas() {
+            let select = document.getElementById('selector-arma');
+            let inventarioActual = turnoJugador === 1 ? inventarioJ1 : inventarioJ2;
+            let armaActualSeleccionada = turnoJugador === 1 ? armaSeleccionadaJ1 : armaSeleccionadaJ2;
+            select.innerHTML = '';
+            let armasUnicas = [...new Set(inventarioActual)];
+            if(!armasUnicas.includes('ESTANDAR')) armasUnicas.unshift('ESTANDAR');
+            armasUnicas.forEach(arma => {
+                let opt = document.createElement('option');
+                opt.value = arma;
+                opt.innerText = arma;
+                if(arma === armaActualSeleccionada) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function cambiarArmaJugador(nuevaArma) {
+            if (estadoJuego !== 'TURNO_JUGADOR') return;
+            if(turnoJugador === 1) armaSeleccionadaJ1 = nuevaArma;
+            else armaSeleccionadaJ2 = nuevaArma;
+            extraVal = '';
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            document.getElementById('val-angulo').innerText = anguloVal;
+            document.getElementById('val-vel').innerText = velocidadVal;
+            let armaActual = turnoJugador === 1 ? armaSeleccionadaJ1 : armaSeleccionadaJ2;
+            let rowExtra = document.getElementById('row-extra');
+            
+            if(armaActual !== 'ESTANDAR') {
+                rowExtra.style.display = 'block';
+                document.getElementById('val-extra').innerText = (extraVal ? extraVal : (armaActual === 'TALADRO' ? '0.5' : '100'));
+            } else {
+                rowExtra.style.display = 'none';
+                extraVal = '';
+            }
+
+            actualizarSelectorArmas();
+            let nombreJ2 = (tipoJuego === 'PVP') ? 'JUGADOR 2' : `COMPUTADORA (${tipoJuego})`;
+            document.getElementById('turn-indicator').innerText = `TURNO: ${turnoJugador === 1 ? 'JUGADOR 1' : nombreJ2} (0-360°)`;
+            document.getElementById('score-indicator').innerText = `PARTIDA #${numeroPartida} | J1: ${scoreJ1} - J2: ${scoreJ2}`;
+            
+            document.getElementById('row-ang').classList.remove('active');
+            document.getElementById('row-vel').classList.remove('active');
+            rowExtra.classList.remove('active');
+
+            if(currentInput === 'angulo') document.getElementById('row-ang').classList.add('active');
+            else if(currentInput === 'velocidad') document.getElementById('row-vel').classList.add('active');
+            else if(currentInput === 'extra') rowExtra.classList.add('active');
+
+            redibujarTodo();
+        }
+
+        function pressNum(num) {
+            initAudio();
+            if(estadoJuego !== 'TURNO_JUGADOR') return;
+            playTone(440, 0.03, 'square');
+            if(currentInput === 'angulo') { if(anguloVal.length < 3) anguloVal += num; }
+            else if(currentInput === 'velocidad') { if(velocidadVal.length < 3) velocidadVal += num; }
+            else if(currentInput === 'extra') { if(extraVal.length < 4) extraVal += num; }
+            updateDisplay();
+        }
+
+        function pressBack() {
+            initAudio();
+            if(estadoJuego !== 'TURNO_JUGADOR') return;
+            playTone(220, 0.04, 'square');
+            if(currentInput === 'angulo') anguloVal = anguloVal.slice(0, -1);
+            else if(currentInput === 'velocidad') velocidadVal = velocidadVal.slice(0, -1);
+            else if(currentInput === 'extra') extraVal = extraVal.slice(0, -1);
+            updateDisplay();
+        }
+
+        function pressEnter() {
+            initAudio();
+            if(estadoJuego !== 'TURNO_JUGADOR') return;
+            playTone(660, 0.05, 'square');
+            let armaActual = turnoJugador === 1 ? armaSeleccionadaJ1 : armaSeleccionadaJ2;
+
+            if(currentInput === 'angulo') {
+                if(anguloVal === '') anguloVal = '45'; 
+                if(parseInt(anguloVal) > 360) anguloVal = '360';
+                currentInput = 'velocidad';
+            } else if(currentInput === 'velocidad') {
+                if(velocidadVal === '') velocidadVal = '25'; 
+                if(armaActual === 'ESTANDAR') {
+                    estadoJuego = 'BLOQUEADO';
+                    document.getElementById('controlPanel').classList.add('hidden');
+                    lanzarBanana();
+                    return;
+                } else {
+                    currentInput = 'extra'; 
+                }
+            } else if(currentInput === 'extra') {
+                if(extraVal === '') extraVal = (armaActual === 'TALADRO') ? '0.5' : '100';
+                estadoJuego = 'BLOQUEADO';
+                document.getElementById('controlPanel').classList.add('hidden');
+                lanzarBanana();
+                return;
+            }
+            updateDisplay();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            if (estadoJuego !== 'TURNO_JUGADOR') return;
+            if (e.key >= '0' && e.key <= '9') {
+                pressNum(e.key);
+            } else if (e.key === 'Backspace') {
+                pressBack();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                pressEnter();
+            }
+        });
+
+        function calcularTiroOptimoIA() {
+            let startX = g2X;
+            let startY = g2Y - 20;
+            let targetX = g1X;
+            let targetY = g1Y;
+
+            let mejorAngulo = 45;
+            let mejorVelocidad = 30;
+            let menorDistancia = 9999;
+            let armaElegida = 'ESTANDAR';
+            let extraElegido = '0.5';
+
+            let tieneTaladro = inventarioJ2.includes('TALADRO');
+            let tieneCapsula = inventarioJ2.includes('CAPSULA');
+
+            for (let angTest = 18; angTest <= 78; angTest += 2) {
+                for (let velTest = 14; velTest <= 62; velTest += 2) {
+                    let rad = (180 - angTest) * Math.PI / 180;
+                    let vx = Math.cos(rad) * (velTest * 0.35);
+                    let vy = Math.sin(rad) * (velTest * 0.35);
+
+                    let px = startX;
+                    let py = startY;
+
+                    for (let step = 0; step < 200; step++) {
+                        px += vx;
+                        py -= vy;
+                        vy -= 0.30;
+
+                        let colision = false;
+                        for (let b of buildings) {
+                            let bTop = canvas.height - b.h;
+                            if (px >= b.x && px <= b.x + b.w && py >= bTop && py <= canvas.height) {
+                                colision = true;
+                                break;
+                            }
+                        }
+
+                        if (colision || py > canvas.height || px < 0 || px > canvas.width) break;
+
+                        let distObjetivo = Math.hypot(px - targetX, py - targetY);
+                        if (distObjetivo < menorDistancia) {
+                            menorDistancia = distObjetivo;
+                            mejorAngulo = angTest;
+                            mejorVelocidad = velTest;
+                        }
+                    }
+                }
+            }
+
+            if (menorDistancia > 30 && tieneTaladro) {
+                armaElegida = 'TALADRO';
+                extraElegido = '0.8';
+            } else if (menorDistancia > 40 && tieneCapsula) {
+                armaElegida = 'CAPSULA';
+                let distDirecta = Math.hypot(startX - targetX, startY - targetY);
+                extraElegido = Math.round(distDirecta * 0.5).toString();
+            }
+
+            tirosIAEnRonda++;
+
+            if (tipoJuego === 'FACIL') {
+                mejorAngulo += (Math.floor(Math.random() * 26) - 13);
+                mejorVelocidad += (Math.floor(Math.random() * 20) - 10);
+            } else if (tipoJuego === 'DIFICIL') {
+                let factorDispersion = tirosIAEnRonda === 1 ? 1.0 : (tirosIAEnRonda === 2 ? 0.5 : 0.25);
+                let signo = Math.random() < 0.5 ? -1 : 1;
+                let desvioAngulo = Math.round((4 + Math.random() * 4) * factorDispersion) * signo;
+                let desvioVel = Math.round((3 + Math.random() * 3) * factorDispersion) * signo;
+
+                mejorAngulo += desvioAngulo;
+                mejorVelocidad += desvioVel;
+            }
+
+            return {
+                angulo: Math.max(12, Math.min(82, mejorAngulo)),
+                velocidad: Math.max(12, Math.min(65, mejorVelocidad)),
+                arma: armaElegida,
+                extra: extraElegido
+            };
+        }
+
+        function ejecutarTurnoIA() {
+            if (estadoJuego !== 'TURNO_IA') return;
+            if (iaTimeoutId) clearTimeout(iaTimeoutId);
+
+            iaTimeoutId = setTimeout(() => {
+                if (estadoJuego !== 'TURNO_IA') return;
+                let tiro = calcularTiroOptimoIA();
+
+                armaSeleccionadaJ2 = tiro.arma;
+                anguloVal = tiro.angulo.toString();
+                velocidadVal = tiro.velocidad.toString();
+                extraVal = tiro.extra;
+
+                updateDisplay();
+
+                iaTimeoutId = setTimeout(() => {
+                    if (estadoJuego !== 'TURNO_IA') return;
+                    estadoJuego = 'BLOQUEADO';
+                    lanzarBanana();
+                }, 750);
+            }, 900);
+        }
+
+        function iniciarGaviotas() {
+            gaviotasActivas = [
+                { id: 1, x: 100, y: 120, dir: 1, viva: true, alas: false },
+                { id: 2, x: 700, y: 150, dir: -1, viva: true, alas: true }
+            ];
+            if(gaviotaTimer) clearInterval(gaviotaTimer);
+            gaviotaTimer = setInterval(() => {
+                if(estadoJuego === 'TURNO_JUGADOR' || estadoJuego === 'TURNO_IA') {
+                    gaviotasActivas.forEach(g => {
+                        if(g.viva) {
+                            g.x += (g.id === 1 ? 2 : 2.5) * g.dir;
+                            g.alas = !g.alas;
+                            if(g.x > 850 || g.x < 50) g.dir *= -1;
+                        }
+                    });
+                    redibujarTodo();
+                }
+            }, 100);
+        }
+
+        function reaparecerGaviota(g) {
+            if(gaviotasDerribadasRonda >= 4) return;
+            setTimeout(() => {
+                g.viva = true;
+                g.x = Math.random() > 0.5 ? 80 : 750;
+                g.dir = Math.random() > 0.5 ? 1 : -1;
+            }, 15000);
+        }
+
+        function lanzarBanana() {
+            estadoJuego = 'BLOQUEADO';
+            if(turnoJugador === 1) g1EstadoBrazos = 3;
+            else g2EstadoBrazos = 3;
+
+            let startX = turnoJugador === 1 ? g1X : g2X;
+            let startY = turnoJugador === 1 ? (g1Y - 20) : (g2Y - 20);
+
+            let ang = parseFloat(anguloVal) || 45;
+            let vel = parseFloat(velocidadVal) || 25;
+
+            if(turnoJugador === 2) ang = 180 - ang;
+
+            let armaActual = turnoJugador === 1 ? armaSeleccionadaJ1 : armaSeleccionadaJ2;
+            let extraParam = parseFloat(extraVal) || (armaActual === 'TALADRO' ? 0.5 : 100);
+
+            let rad = ang * Math.PI / 180;
+            let baseVx = Math.cos(rad) * (vel * 0.35);
+            let baseVy = Math.sin(rad) * (vel * 0.35);
+
+            let proyectiles = [];
+            if(armaActual === 'CAPSULA') {
+                proyectiles.push({
+                    x: startX, y: startY, vx: baseVx, vy: baseVy,
+                    tipo: 'capsula', recorrido: 0, detonarDist: extraParam * 1.5, activa: true
+                });
+            } else {
+                proyectiles.push({
+                    x: startX, y: startY, vx: baseVx, vy: baseVy,
+                    tipo: armaActual, factorTaladro: extraParam, activa: true
+                });
+            }
+
+            let rotacion = 0;
+            let rondaFinalizada = false;
+
+            function animar() {
+                if (rondaFinalizada) return;
+
+                rotacion += 25;
+                let todosInactivos = true;
+                redibujarTodo();
+
+                for (let p of proyectiles) {
+                    if(!p.activa) continue;
+                    todosInactivos = false;
+
+                    p.x += p.vx;
+                    p.y -= p.vy;
+                    p.vy -= 0.30;
+
+                    if(p.tipo === 'capsula') {
+                        p.recorrido = Math.hypot(p.x - startX, p.y - startY);
+                        if(p.recorrido >= p.detonarDist) {
+                            p.activa = false;
+                            proyectiles.push({ x: p.x, y: p.y, vx: p.vx * 1.15, vy: p.vy + 1.2, tipo: 'estandar_hijo', activa: true });
+                            proyectiles.push({ x: p.x, y: p.y, vx: p.vx * 0.85, vy: p.vy - 1.2, tipo: 'estandar_hijo', activa: true });
+                        }
+                    }
+
+                    drawRetroBanana(ctx, p.x, p.y, rotacion, p.tipo);
+
+                    // Colisión con gaviotas
+                    for(let g of gaviotasActivas) {
+                        if(g.viva && Math.abs(p.x - g.x) < 25 && Math.abs(p.y - g.y) < 25) {
+                            g.viva = false;
+                            gaviotasDerribadasRonda++;
+                            let recompensa = Math.random() > 0.5 ? 'TALADRO' : 'CAPSULA';
+                            if(turnoJugador === 1) inventarioJ1.push(recompensa);
+                            else inventarioJ2.push(recompensa);
+                            mostrarMensaje(`🎯 ¡GAVIOTA CAZADA! ARMA OBTENIDA: ${recompensa}`);
+                            reaparecerGaviota(g);
+                            break;
+                        }
+                    }
+
+                    // Colisión con gorilas
+                    let targetX = turnoJugador === 1 ? g2X : g1X;
+                    let targetY = turnoJugador === 1 ? g2Y : g1Y;
+                    if (Math.hypot(p.x - targetX, p.y - targetY) < 22) {
+                        p.activa = false;
+                        rondaFinalizada = true;
+                        playExplosionSound('TALADRO');
+                        ultimoGanador = turnoJugador;
+                        let ganadorTexto = turnoJugador === 1 ? 'JUGADOR 1' : (tipoJuego === 'PVP' ? 'JUGADOR 2' : 'COMPUTADORA');
+
+                        desintegrarGorilaRival(turnoJugador, targetX, targetY, () => {
+                            if(turnoJugador === 1) scoreJ1++; else scoreJ2++;
+                            mostrarMensaje(`💥 ¡IMPACTO DIRECTO DE ${ganadorTexto}!`, 1800);
+                            setTimeout(() => {
+                                finDeRonda();
+                            }, 1800);
+                        });
+                        return;
+                    }
+
+                    // Colisión con edificios
+                    for(let b of buildings) {
+                        let bTop = canvas.height - b.h;
+                        if(p.x >= b.x && p.x <= b.x + b.w && p.y >= bTop && p.y <= canvas.height) {
+                            p.activa = false;
+                            playExplosionSound(p.tipo);
+
+                            let radioExplosion = (p.tipo === 'TALADRO') ? (15 + (Math.max(0, Math.min(1, p.factorTaladro)) * 40)) : 20;
+
+                            bCtx.globalCompositeOperation = 'destination-out';
+                            bCtx.beginPath(); bCtx.arc(p.x, p.y, radioExplosion, 0, Math.PI * 2); bCtx.fill();
+                            if(p.tipo === 'TALADRO') {
+                                bCtx.beginPath(); bCtx.arc(p.x, p.y + 30, radioExplosion * 0.9, 0, Math.PI * 2); bCtx.fill();
+                            }
+                            bCtx.globalCompositeOperation = 'source-over';
+                            break;
+                        }
+                    }
+
+                    if(p.y > canvas.height || p.x > canvas.width || p.x < 0) {
+                        p.activa = false;
+                    }
+                }
+
+                if(todosInactivos && !rondaFinalizada) {
+                    g1EstadoBrazos = 0;
+                    g2EstadoBrazos = 0;
+                    if(turnoJugador === 1 && armaSeleccionadaJ1 !== 'ESTANDAR') {
+                        let idx = inventarioJ1.indexOf(armaSeleccionadaJ1);
+                        if(idx > -1) inventarioJ1.splice(idx, 1);
+                        armaSeleccionadaJ1 = 'ESTANDAR';
+                    } else if(turnoJugador === 2 && armaSeleccionadaJ2 !== 'ESTANDAR') {
+                        let idx = inventarioJ2.indexOf(armaSeleccionadaJ2);
+                        if(idx > -1) inventarioJ2.splice(idx, 1);
+                        armaSeleccionadaJ2 = 'ESTANDAR';
+                    }
+                    setTimeout(() => {
+                        if (!rondaFinalizada) {
+                            turnoJugador = turnoJugador === 1 ? 2 : 1;
+                            activarTurnoActual();
+                        }
+                    }, 300);
+                    return;
+                }
+                requestAnimationFrame(animar);
+            }
+            requestAnimationFrame(animar);
+        }
+
+        function desintegrarGorilaRival(jugadorAtacante, xTarget, yTarget, callback) {
+            estadoJuego = 'BLOQUEADO';
+            let radioDesintegracion = 4;
+            if(jugadorAtacante === 1) g1EstadoBrazos = 3; else g2EstadoBrazos = 3;
+            let intervalDesint = setInterval(() => {
+                redibujarTodo();
+                drawRetroGorilla(ctx, xTarget, yTarget, 0, true);
+                bCtx.globalCompositeOperation = 'destination-out';
+                bCtx.beginPath(); bCtx.arc(xTarget, yTarget - 10, radioDesintegracion, 0, Math.PI * 2); bCtx.fill();
+                bCtx.globalCompositeOperation = 'source-over';
+                radioDesintegracion += 5;
+                if(radioDesintegracion > 35) {
+                    clearInterval(intervalDesint);
+                    callback();
+                }
+            }, 60);
+        }
+
+        function finDeRonda() {
+            if(iaTimeoutId) clearTimeout(iaTimeoutId);
+            g1EstadoBrazos = 0;
+            g2EstadoBrazos = 0;
+            numeroPartida++;
+            inventarioJ1 = ['ESTANDAR'];
+            inventarioJ2 = ['ESTANDAR'];
+            armaSeleccionadaJ1 = 'ESTANDAR';
+            armaSeleccionadaJ2 = 'ESTANDAR';
+            if(gaviotaTimer) clearInterval(gaviotaTimer);
+            generarNuevaPartida();
+        }
+    </script>
+    <!-- actualizacion movil -->
+</body>
+</html>
