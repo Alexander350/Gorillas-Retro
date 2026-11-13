@@ -1140,6 +1140,132 @@ if (typeof canvas !== 'undefined' && typeof ctx !== 'undefined') {
     setTimeout(actualizarYDibujarIntro, 300);
   });
 }
+// ==========================================
+// MÓDULO INTRO CINEMÁTICA Y MENÚ BLINDADO
+// ==========================================
+let introActiva = true;
+let introPaso = 0; // 0: Bajando, 1: Acercándose, 2: Baile de brazos, 3: Botón continuar
+let introY = -300;
+let introZoom = 0.4;
+let introBrazosTimer = 0;
+let introAlternarBrazos = 0;
+
+// 1. Asegurar que el menú de selección empiece oculto para que mande la intro
+const menuModosElemento = document.getElementById('mode-menu') || document.querySelector('.menu-modos');
+if (menuModosElemento) {
+    menuModosElemento.style.display = 'none';
+}
+
+// 2. Sintetizador Web Audio para la melodía clásica de 8-bits
+function reproducirMusicaIntro8Bits() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const notas = [220, 247.05, 277.18, 293.66, 329.63, 369.99, 415.30, 440];
+        let i = 0;
+        const intervaloAudio = setInterval(() => {
+            if (!introActiva) {
+                clearInterval(intervaloAudio);
+                return;
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(notas[i % notas.length], audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+            i++;
+        }, 180);
+    } catch(e) {
+        console.log("Audio esperando interacción");
+    }
+}
+
+// 3. Botón de Continuar flotante retro
+const btnContinuarIntro = document.createElement('button');
+btnContinuarIntro.innerText = "CONTINUAR";
+btnContinuarIntro.style.cssText = "position:absolute; bottom:50px; left:50%; transform:translateX(-50%); padding:14px 32px; font-size:20px; font-weight:bold; font-family:'Courier New', monospace; background:#000; color:#00ffff; border:3px solid #00ffff; border-radius:6px; cursor:pointer; z-index:99999; display:none; box-shadow: 0 0 20px rgba(0,255,255,0.6);";
+document.body.appendChild(btnContinuarIntro);
+
+btnContinuarIntro.addEventListener('click', () => {
+    introActiva = false;
+    btnContinuarIntro.style.display = 'none';
+    // Mostrar el menú de selección de modos de tu juego
+    if (menuModosElemento) {
+        menuModosElemento.style.display = 'block';
+    }
+});
+
+// 4. Bucle principal de renderizado de la intro cinemática
+function actualizarYDibujarIntro() {
+    if (!introActiva) return;
+    
+    // Fondo clásico azul de Gorilas
+    ctx.fillStyle = '#0000aa';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    let cx = canvas.width / 2;
+    let cy = canvas.height / 2;
+    
+    // Rascacielos estilo Empire State al fondo
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(cx - 90, cy - 250, 180, 400);
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(cx - 50, cy - 350, 100, 100);
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(cx - 8, cy - 410, 16, 60);
+
+    // Ventanas retro iluminadas
+    ctx.fillStyle = '#facc15';
+    for(let wy = cy - 230; wy < cy + 120; wy += 25) {
+        for(let wx = cx - 70; wx < cx + 70; wx += 30) {
+            if(Math.sin(wx + wy) > 0) ctx.fillRect(wx, wy, 12, 16);
+        }
+    }
+
+    // Lógica de pasos de la cinemática
+    if (introPaso === 0) {
+        introY += 2;
+        if (introY >= cy - 50) introPaso = 1;
+    } else if (introPaso === 1) {
+        introZoom += 0.012;
+        if (introZoom >= 1.3) {
+            introPaso = 2;
+            reproducirMusicaIntro8Bits(); // Dispara la musiquita 8-bits al llegar al frente
+        }
+    } else if (introPaso === 2) {
+        introBrazosTimer++;
+        if (introBrazosTimer % 15 === 0) {
+            introAlternarBrazos = 1 - introAlternarBrazos; // Alterna brazos derecha / izquierda
+        }
+        if (introBrazosTimer > 150) {
+            introPaso = 3;
+            btnContinuarIntro.style.display = 'block'; // Muestra el botón CONTINUAR
+        }
+    }
+
+    let offsetGorilaX = 130 * introZoom;
+    
+    // Dibujar gorilas con función original si existe, o con soporte integrado
+    if (typeof drawRetroGorila === 'function') {
+        drawRetroGorila(ctx, cx - offsetGorilaX, cy + 30, introAlternarBrazos === 0 ? 1 : 2, false);
+        drawRetroGorila(ctx, cx + offsetGorilaX, cy + 30, introAlternarBrazos === 1 ? 1 : 2, true);
+    }
+
+    // Título superior
+    ctx.fillStyle = '#ffff55';
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText("GORILAS.BAS - INTRO", cx, 50);
+
+    requestAnimationFrame(actualizarYDibujarIntro);
+}
+
+// Arrancar la intro al cargar de forma segura
+setTimeout(actualizarYDibujarIntro, 300);
     </script>
     <!-- actualizacion movil -->
 </body>
