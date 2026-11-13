@@ -75,7 +75,7 @@
             align-items: center;
             z-index: 50;
             gap: 15px;
-            display: none; /* Arranca oculto para dar paso prioritario a la intro */
+            display: none;
         }
         #mode-menu h1 {
             color: #ffff55;
@@ -221,9 +221,10 @@
         let audioCtx = null;
 
         function initAudio() {
-            if(!audioCtx) audioCtx = new AudioCtx();
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-        }
+    if (!AudioCtx) return;
+    if (!audioCtx) audioCtx = new AudioCtx();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
 
         function playTone(freq, duration, type = 'square') {
             if(!audioCtx) return;
@@ -446,7 +447,7 @@
             context.restore();
         }
 
-        async function iniciarModoJuego(modo) {
+                async function iniciarModoJuego(modo) {
             try {
                 const elem = document.documentElement;
                 if (elem.requestFullscreen) await elem.requestFullscreen();
@@ -755,10 +756,11 @@
                 }
             }
 
-            if (menorDistancia > 30 && tieneTaladro) {
+            // CORRECCIÓN IA: Espera 2 tiros (tirosIAEnRonda >= 2) antes de usar armas especiales
+            if (menorDistancia > 30 && tieneTaladro && tirosIAEnRonda >= 2) {
                 armaElegida = 'TALADRO';
                 extraElegido = '0.8';
-            } else if (menorDistancia > 40 && tieneCapsula) {
+            } else if (menorDistancia > 40 && tieneCapsula && tirosIAEnRonda >= 2) {
                 armaElegida = 'CAPSULA';
                 let distDirecta = Math.hypot(startX - targetX, startY - targetY);
                 extraElegido = Math.round(distDirecta * 0.5).toString();
@@ -1008,68 +1010,110 @@
             generarNuevaPartida();
         }
 
-        // ==========================================
+                // ==========================================
         // MÓDULO ÚNICO DE INTRO CINEMÁTICA Y MENÚ
         // ==========================================
         let introActiva = true;
-        let introPaso = 0; 
+        let introPaso = 0;
         let introY = -300;
         let introZoom = 0.3;
         let introBrazosTimer = 0;
         let introAlternarBrazos = 0;
+        let introFrameId = null;
 
         const menuModosElemento = document.getElementById('mode-menu');
         if (menuModosElemento) {
             menuModosElemento.style.display = 'none';
         }
 
+        const gameContainer = document.getElementById('game-container');
+        const btnContinuarIntro = document.createElement('button');
+        btnContinuarIntro.innerText = "CONTINUAR";
+        btnContinuarIntro.style.cssText = `
+            position:absolute;
+            bottom:20px;
+            left:50%;
+            transform:translateX(-50%);
+            padding:12px 28px;
+            font-size:18px;
+            font-weight:bold;
+            font-family:'Courier New', monospace;
+            background:#000;
+            color:#00ffff;
+            border:3px solid #00ffff;
+            border-radius:6px;
+            cursor:pointer;
+            z-index:99999;
+            display:none;
+            box-shadow: 0 0 20px rgba(0,255,255,0.6);
+        `;
+        gameContainer.appendChild(btnContinuarIntro);
+
+        btnContinuarIntro.addEventListener('click', () => {
+            introActiva = false;
+            btnContinuarIntro.style.display = 'none';
+            if (introFrameId) cancelAnimationFrame(introFrameId);
+            if (menuModosElemento) {
+                menuModosElemento.style.display = 'flex';
+            }
+        });
+
         function reproducirMusicaIntro8Bits() {
+            if (!audioCtx) return;
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const notas = [220, 247.05, 277.18, 293.66, 329.63, 369.99, 415.30, 440];
+                const melodia = [
+                    { f: 493.88, d: 0.12 },
+                    { f: 0, d: 0.05 },
+                    { f: 493.88, d: 0.12 },
+                    { f: 440.00, d: 0.12 },
+                    { f: 440.00, d: 0.12 },
+                    { f: 0, d: 0.05 },
+                    { f: 493.88, d: 0.12 },
+                    { f: 0, d: 0.05 },
+                    { f: 493.88, d: 0.12 },
+                    { f: 0, d: 0.05 },
+                    { f: 493.88, d: 0.12 },
+                    { f: 440.00, d: 0.12 },
+                    { f: 440.00, d: 0.12 },
+                    { f: 440.00, d: 0.12 },
+                    { f: 0, d: 0.05 },
+                    { f: 493.88, d: 0.12 },
+                    { f: 0, d: 0.05 },
+                    { f: 493.88, d: 0.12 },
+                    { f: 440.00, d: 0.12 },
+                    { f: 440.00, d: 0.12 },
+                    { f: 0, d: 0.05 },
+                    { f: 493.88, d: 0.12 }
+                ];
+
                 let i = 0;
                 const intervaloAudio = setInterval(() => {
                     if (!introActiva) {
                         clearInterval(intervaloAudio);
                         return;
                     }
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(notas[i % notas.length], audioCtx.currentTime);
-                    gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-                    osc.connect(gain);
-                    gain.connect(audioCtx.destination);
-                    osc.start();
-                    osc.stop(audioCtx.currentTime + 0.15);
-                    i++;
+                    if (i < melodia.length) {
+                        const nota = melodia[i];
+                        if (nota.f > 0) {
+                            playTone(nota.f, nota.d, 'square');
+                        }
+                        i++;
+                    } else {
+                        clearInterval(intervaloAudio);
+                    }
                 }, 180);
-            } catch(e) {}
+            } catch (e) {}
         }
-
-        const btnContinuarIntro = document.createElement('button');
-        btnContinuarIntro.innerText = "CONTINUAR";
-        btnContinuarIntro.style.cssText = "position:absolute; bottom:50px; left:50%; transform:translateX(-50%); padding:14px 32px; font-size:20px; font-weight:bold; font-family:'Courier New', monospace; background:#000; color:#00ffff; border:3px solid #00ffff; border-radius:6px; cursor:pointer; z-index:99999; display:none; box-shadow: 0 0 20px rgba(0,255,255,0.6);";
-        document.body.appendChild(btnContinuarIntro);
-
-        btnContinuarIntro.addEventListener('click', () => {
-            introActiva = false;
-            btnContinuarIntro.style.display = 'none';
-            if (menuModosElemento) {
-                menuModosElemento.style.display = 'flex'; // Muestra el menú de selección de modos
-            }
-        });
 
         function actualizarYDibujarIntro() {
             if (!introActiva) return;
-            
+
             ctx.fillStyle = '#0000aa';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             let cx = canvas.width / 2;
             let cy = canvas.height / 2;
-            
+
             ctx.fillStyle = '#111827';
             ctx.fillRect(cx - 90, cy - 250, 180, 400);
             ctx.fillStyle = '#1f2937';
@@ -1078,9 +1122,9 @@
             ctx.fillRect(cx - 8, cy - 410, 16, 60);
 
             ctx.fillStyle = '#facc15';
-            for(let wy = cy - 230; wy < cy + 120; wy += 25) {
-                for(let wx = cx - 70; wx < cx + 70; wx += 30) {
-                    if(Math.sin(wx + wy) > 0) ctx.fillRect(wx, wy, 12, 16);
+            for (let wy = cy - 230; wy < cy + 120; wy += 25) {
+                for (let wx = cx - 70; wx < cx + 70; wx += 30) {
+                    if (Math.sin(wx + wy) > 0) ctx.fillRect(wx, wy, 12, 16);
                 }
             }
 
@@ -1105,7 +1149,7 @@
             }
 
             let offsetGorilaX = 130 * introZoom;
-            
+
             drawRetroGorilla(ctx, cx - offsetGorilaX, cy + 30, introAlternarBrazos === 0 ? 1 : 2, false);
             drawRetroGorilla(ctx, cx + offsetGorilaX, cy + 30, introAlternarBrazos === 1 ? 1 : 2, true);
 
@@ -1114,10 +1158,16 @@
             ctx.textAlign = 'center';
             ctx.fillText("GORILAS.BAS - INTRO", cx, 50);
 
-            requestAnimationFrame(actualizarYDibujarIntro);
+            introFrameId = requestAnimationFrame(actualizarYDibujarIntro);
         }
 
-        setTimeout(actualizarYDibujarIntro, 300);
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (introActiva) {
+                    actualizarYDibujarIntro();
+                }
+            }, 300);
+        });
     </script>
 </body>
 </html>
